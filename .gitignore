@@ -1,0 +1,5 @@
+*.xml
+*.o
+predic_result.txt
+err.log
+train_debug.txt
