@@ -37,6 +37,7 @@ Mat trainData;
 Mat trainLabel;
 
 
+
 void make_feature(Mat src,Mat &dst)
 {
     assert(src.data && dst.data && src.type() == CV_8UC1 && 
@@ -53,6 +54,7 @@ void make_feature(Mat src,Mat &dst)
     normalize(dst,dst);
 }
 
+
 void write_feature_to_file(Mat feat, ofstream &ofs)
 {
     assert(ofs && feat.data && feat.size() == Size(FEAT_WIDTH*FEAT_HEIGHT,1)&& feat.type() == CV_32FC1);
@@ -66,14 +68,8 @@ void write_feature_to_file(Mat feat, ofstream &ofs)
     ofs << endl;
 }
 
-void train_mnist_svm(int debug)
+int prepare_data(int debug)
 {
-    int n_img = count_dir_files(TRAIN_IMAGE_DIR);
-    if(n_img <= 0)
-    {
-        cout << "No image avaliable"<<endl;
-        return;
-    }
     ifstream ifs;
     ofstream ofs;
     ifs.open(TRAIN_LABEL_FILENAME);
@@ -84,25 +80,16 @@ void train_mnist_svm(int debug)
     if(!ifs)
     {
         cout<<TRAIN_LABEL_FILENAME<<" missing"<<endl;
-        return;
+        return -1;
     }
-    string prefix = "train_image/train_";
     Mat img_feat = Mat(1,FEAT_SIZE,CV_32FC1);
-    trainData = Mat::zeros(n_img,FEAT_SIZE,CV_32FC1);
-    trainLabel = Mat::zeros(n_img,1,CV_32SC1);
-    for(int i = 0; i < n_img; i++)
+    string line,name;
+    int label;
+    while(getline(ifs,line))
     {
-        string line,name;
-        int label;
-        if(!getline(ifs,line))
-        {
-            cout<<"image number and labels do not match"<<endl;
-            return;
-        }
         istringstream iss(line);
         iss >> name >> label;
-        string fname = prefix + int2str(i)+".jpg";
-        Mat img = imread(fname.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        Mat img = imread(name.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
         if(!img.data)
             continue;
         make_feature(img,img_feat);
@@ -110,16 +97,26 @@ void train_mnist_svm(int debug)
         {
             write_feature_to_file(img_feat,ofs);
         }
-        memcpy(trainData.data + i * FEAT_SIZE * sizeof(float),img_feat.data,FEAT_SIZE * sizeof(float));
-        trainLabel.at<unsigned int>(i,0) = label;
+        trainData.push_back(img_feat);
+        trainLabel.push_back(label);
     }
+    ifs.close();
+    ofs.close();
+    if(trainData.data && trainLabel.data)
+        return 0;
+    else
+        return -1;
+}
 
+void train_mnist_svm(int debug)
+{
+    if(prepare_data(debug))
+    {
+        cout<<"prepare data failed"<<endl;
+        return;
+    }
     //start_training
     //
-    if(debug)
-    {
-        ofs.close();
-    }
     cout<<"start training SVM..."<<endl;
     CvSVM svm;
     CvSVMParams params;
@@ -130,7 +127,6 @@ void train_mnist_svm(int debug)
     svm.train(trainData,trainLabel,Mat(),Mat(),params);
     cout<<"Done !"<<endl;
     svm.save(SVM_MODEL_NAME);
-    ifs.close();
     return;
 
 }
@@ -194,69 +190,19 @@ void test_mnist_svm(int debug)
 
 void train_mnist_dtrees(int debug)
 {
-    int n_img = count_dir_files(TRAIN_IMAGE_DIR);
-    if(n_img <= 0)
+    if(prepare_data(debug))
     {
-        cout << "No image avaliable"<<endl;
-        return;
-    }
-    ifstream ifs;
-    ofstream ofs;
-    ifs.open(TRAIN_LABEL_FILENAME);
-    if(debug)
-    {
-        ofs.open(TRAIN_DEBUG_FILENAME);
-    }
-    if(!ifs)
-    {
-        cout<<TRAIN_LABEL_FILENAME<<" missing"<<endl;
-        return;
-    }
-    string prefix = "train_image/train_";
-    Mat img_feat = Mat(1,FEAT_SIZE,CV_32FC1);
-    trainData = Mat::zeros(n_img,FEAT_SIZE,CV_32FC1);
-    trainLabel = Mat::zeros(n_img,1,CV_32SC1);
-    for(int i = 0; i < n_img; i++)
-    {
-        string line,name;
-        int label;
-        if(!getline(ifs,line))
-        {
-            cout<<"image number and labels do not match"<<endl;
-            return;
-        }
-        istringstream iss(line);
-        iss >> name >> label;
-        string fname = prefix + int2str(i)+".jpg";
-        Mat img = imread(fname.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
-        if(!img.data)
-            continue;
-        make_feature(img,img_feat);
-        if(debug) 
-        {
-            write_feature_to_file(img_feat,ofs);
-        }
-        memcpy(trainData.data + i * FEAT_SIZE * sizeof(float),img_feat.data,FEAT_SIZE * sizeof(float));
-        trainLabel.at<unsigned int>(i,0) = label;
-    }
-
-    //start_training
-    //
-    if(debug)
-    {
-        ofs.close();
+         cout<<"prepare data failed"<<endl;
+         return;
     }
     cout<<"start training Random Trees..."<<endl;
     CvDTree forest;
     CvRTParams params;
-    //CvTermCriteria criteria;
 
-    //criteria = cvTermCriteria(CV_TERMCRIT_EPS,1000,0.001);//FLT_EPSILON);
     params = CvRTParams(10,10,0,false,15,0,true,4,100,0.01f,CV_TERMCRIT_ITER);
     forest.train(trainData,CV_ROW_SAMPLE,trainLabel,Mat(),Mat(),Mat(),Mat(),params);
     cout<<"Done !"<<endl;
     forest.save(RANDOM_TREES_MODEL_NAME);
-    ifs.close();
     return;
 }
 
@@ -351,7 +297,7 @@ int main(int argc,char *argv[])
         }
         else
         {
-            cout << "param " << arg1 << "not supported" << endl;
+            cout << "param " << arg1 << " not supported" << endl;
             return -1;
         }
     }
@@ -382,7 +328,7 @@ int main(int argc,char *argv[])
         }
         else
         {
-            cout << "param " << arg1 << "not supported" << endl;
+            cout << "param " << arg2 << " not supported" << endl;
             return -1;
         }
     }
@@ -413,7 +359,7 @@ int main(int argc,char *argv[])
         }
         else
         {
-            cout << "param " << arg1 << "not supported" << endl;
+            cout << "param " << arg3 << " not supported" << endl;
             return -1;
         }
     }
@@ -427,6 +373,5 @@ int main(int argc,char *argv[])
     {
         test(debug_flag);     
     }
-   // cout<<count_dir_files("test_image")<<endl;
     return 0;
 }
