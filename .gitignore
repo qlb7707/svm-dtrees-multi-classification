@@ -1,5 +1,6 @@
 *.xml
 *.o
-predic_result.txt
+predict_result.txt
 err.log
 train_debug.txt
+test_debug.txt

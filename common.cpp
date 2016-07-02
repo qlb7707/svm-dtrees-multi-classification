@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <errno.h>
 using namespace std;
 int count_dir_files(const char dir[])
@@ -73,4 +74,20 @@ int count_dir_files(const char dir[])
     closedir(pdir);
     return fcnt;
 
+}
+int str2int(string src)
+{
+    int num;
+    istringstream iss(src);
+    iss>>num;
+    return num;
+}
+
+string int2str(int n)
+{
+    ostringstream oss;
+    string str;
+    oss<<n;
+    str = oss.str();
+    return str;
 }
