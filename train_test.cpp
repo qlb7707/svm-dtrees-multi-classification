@@ -29,7 +29,7 @@
 #define TEST_DEBUG_FILENAME "test_debug.txt"
 #define TEST_RESULT_FILENAME "predict_result.txt"
 #define SVM_MODEL_NAME "svm_train.xml"
-
+#define RANDOM_TREES_MODEL_NAME "random_tree_train.xml"
 using namespace std;
 using namespace cv;
 
@@ -120,7 +120,7 @@ void train_mnist_svm(int debug)
     {
         ofs.close();
     }
-    cout<<"start training..."<<endl;
+    cout<<"start training SVM..."<<endl;
     CvSVM svm;
     CvSVMParams params;
     CvTermCriteria criteria;
@@ -142,7 +142,7 @@ void test_mnist_svm(int debug)
     string filename,line;
     Mat img;
     int label,res,cnt = 0,correct = 0;
-    cout<<"start testing..."<<endl;
+    cout<<"start testing SVM..."<<endl;
     ifs.open(TEST_LABEL_FILENAME,ios::in);
     ofs.open(TEST_RESULT_FILENAME,ios::out);
     if(debug)
@@ -192,10 +192,138 @@ void test_mnist_svm(int debug)
     ofs.close();
 }
 
+void train_mnist_dtrees(int debug)
+{
+    int n_img = count_dir_files(TRAIN_IMAGE_DIR);
+    if(n_img <= 0)
+    {
+        cout << "No image avaliable"<<endl;
+        return;
+    }
+    ifstream ifs;
+    ofstream ofs;
+    ifs.open(TRAIN_LABEL_FILENAME);
+    if(debug)
+    {
+        ofs.open(TRAIN_DEBUG_FILENAME);
+    }
+    if(!ifs)
+    {
+        cout<<TRAIN_LABEL_FILENAME<<" missing"<<endl;
+        return;
+    }
+    string prefix = "train_image/train_";
+    Mat img_feat = Mat(1,FEAT_SIZE,CV_32FC1);
+    trainData = Mat::zeros(n_img,FEAT_SIZE,CV_32FC1);
+    trainLabel = Mat::zeros(n_img,1,CV_32SC1);
+    for(int i = 0; i < n_img; i++)
+    {
+        string line,name;
+        int label;
+        if(!getline(ifs,line))
+        {
+            cout<<"image number and labels do not match"<<endl;
+            return;
+        }
+        istringstream iss(line);
+        iss >> name >> label;
+        string fname = prefix + int2str(i)+".jpg";
+        Mat img = imread(fname.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        if(!img.data)
+            continue;
+        make_feature(img,img_feat);
+        if(debug) 
+        {
+            write_feature_to_file(img_feat,ofs);
+        }
+        memcpy(trainData.data + i * FEAT_SIZE * sizeof(float),img_feat.data,FEAT_SIZE * sizeof(float));
+        trainLabel.at<unsigned int>(i,0) = label;
+    }
+
+    //start_training
+    //
+    if(debug)
+    {
+        ofs.close();
+    }
+    cout<<"start training Random Trees..."<<endl;
+    CvDTree forest;
+    CvRTParams params;
+    //CvTermCriteria criteria;
+
+    //criteria = cvTermCriteria(CV_TERMCRIT_EPS,1000,0.001);//FLT_EPSILON);
+    params = CvRTParams(10,10,0,false,15,0,true,4,100,0.01f,CV_TERMCRIT_ITER);
+    forest.train(trainData,CV_ROW_SAMPLE,trainLabel,Mat(),Mat(),Mat(),Mat(),params);
+    cout<<"Done !"<<endl;
+    forest.save(RANDOM_TREES_MODEL_NAME);
+    ifs.close();
+    return;
+}
+
+void test_mnist_dtrees(int debug)
+{
+    ifstream ifs;
+    ofstream ofs,ofs_d;
+    string filename,line;
+    Mat img;
+    int label,res,cnt = 0,correct = 0;
+    cout<<"start testing Random Trees..."<<endl;
+    ifs.open(TEST_LABEL_FILENAME,ios::in);
+    ofs.open(TEST_RESULT_FILENAME,ios::out);
+    if(debug)
+    {
+        ofs_d.open(TEST_DEBUG_FILENAME);
+    }
+    CvDTree forest;
+    if(access(RANDOM_TREES_MODEL_NAME,F_OK))
+    {
+        cout<<RANDOM_TREES_MODEL_NAME<<" missing"<<endl;
+        return;
+    }
+    forest.load(RANDOM_TREES_MODEL_NAME);
+    if(!ifs)
+    {
+        cout<<TEST_LABEL_FILENAME<<" missing"<<endl;
+        return;
+    }
+
+    Mat img_feat = Mat(1,FEAT_SIZE,CV_32FC1);
+    while(getline(ifs,line))
+    {
+        istringstream iss(line);
+        iss >> filename >> label;
+        img = imread(filename.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        if(!img.data)
+            continue;
+        make_feature(img, img_feat);
+        if(debug)
+        {
+            write_feature_to_file(img_feat,ofs_d);
+        }
+        res = forest.predict(img_feat)->value;
+        ofs<< filename <<" "<< res <<" "<< label<<endl;
+        if(res == label)
+        {
+            correct ++;
+        }
+        cnt ++;
+    }
+    if(debug)
+    {
+        ofs_d.close();
+    }
+    ofs<<"accurcy:"<<1.0 * correct / cnt << "(" << correct <<"/"<<cnt<<")"<<endl;
+    ifs.close();
+    ofs.close();
+}
 int main(int argc,char *argv[])
 {
     int train_flag = 0,test_flag = 0, debug_flag = 0;
     string arg1,arg2,arg3;
+    void (*train)(int);
+    void (*test)(int);
+    train = train_mnist_svm;
+    test = test_mnist_svm;
     if(argc >= 2)
     {
         arg1 = argv[1];
@@ -210,6 +338,16 @@ int main(int argc,char *argv[])
         else if(arg1 == "-p")
         {
             test_flag = 1;
+        }
+        else if(arg1 == "--svm")
+        {
+            train = train_mnist_svm;
+            test = test_mnist_svm;
+        }
+        else if(arg1 == "--dtrees")
+        {
+            train = train_mnist_dtrees;
+            test = test_mnist_dtrees;
         }
         else
         {
@@ -232,6 +370,16 @@ int main(int argc,char *argv[])
         {
             test_flag = 1;
         }
+        else if(arg2 == "--svm")
+        {
+            train = train_mnist_svm;
+            test = test_mnist_svm;
+        }
+        else if(arg2 == "--dtrees")
+        {
+            train = train_mnist_dtrees;
+            test = test_mnist_dtrees;
+        }
         else
         {
             cout << "param " << arg1 << "not supported" << endl;
@@ -253,6 +401,16 @@ int main(int argc,char *argv[])
         {
             test_flag = 1;
         }
+        else if(arg3 == "--svm")
+        {
+            train = train_mnist_svm;
+            test = test_mnist_svm;
+        }
+        else if(arg3 == "--dtrees")
+        {
+            train = train_mnist_dtrees;
+            test = test_mnist_dtrees;
+        }
         else
         {
             cout << "param " << arg1 << "not supported" << endl;
@@ -263,11 +421,11 @@ int main(int argc,char *argv[])
 
     if(train_flag)
     {
-        train_mnist_svm(debug_flag);
+        train(debug_flag);
     }
     if(test_flag)
     {
-        test_mnist_svm(debug_flag);     
+        test(debug_flag);     
     }
    // cout<<count_dir_files("test_image")<<endl;
     return 0;
