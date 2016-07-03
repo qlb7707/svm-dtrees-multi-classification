@@ -196,7 +196,7 @@ void train_mnist_dtrees(int debug)
          return;
     }
     cout<<"start training Random Trees..."<<endl;
-    CvDTree forest;
+    CvRTrees forest;
     CvRTParams params;
 
     params = CvRTParams(10,10,0,false,15,0,true,4,100,0.01f,CV_TERMCRIT_ITER);
@@ -220,7 +220,7 @@ void test_mnist_dtrees(int debug)
     {
         ofs_d.open(TEST_DEBUG_FILENAME);
     }
-    CvDTree forest;
+    CvRTrees forest;
     if(access(RANDOM_TREES_MODEL_NAME,F_OK))
     {
         cout<<RANDOM_TREES_MODEL_NAME<<" missing"<<endl;
@@ -246,7 +246,7 @@ void test_mnist_dtrees(int debug)
         {
             write_feature_to_file(img_feat,ofs_d);
         }
-        res = forest.predict(img_feat)->value;
+        res = (int)forest.predict(img_feat);
         ofs<< filename <<" "<< res <<" "<< label<<endl;
         if(res == label)
         {
@@ -290,7 +290,7 @@ int main(int argc,char *argv[])
             train = train_mnist_svm;
             test = test_mnist_svm;
         }
-        else if(arg1 == "--dtrees")
+        else if(arg1 == "--rtrees")
         {
             train = train_mnist_dtrees;
             test = test_mnist_dtrees;
@@ -321,7 +321,7 @@ int main(int argc,char *argv[])
             train = train_mnist_svm;
             test = test_mnist_svm;
         }
-        else if(arg2 == "--dtrees")
+        else if(arg2 == "--rtrees")
         {
             train = train_mnist_dtrees;
             test = test_mnist_dtrees;
@@ -352,7 +352,7 @@ int main(int argc,char *argv[])
             train = train_mnist_svm;
             test = test_mnist_svm;
         }
-        else if(arg3 == "--dtrees")
+        else if(arg3 == "--rtrees")
         {
             train = train_mnist_dtrees;
             test = test_mnist_dtrees;
