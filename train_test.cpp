@@ -108,7 +108,7 @@ int prepare_data(int debug)
         return -1;
 }
 
-void train_mnist_svm(int debug)
+void train_by_svm(int debug)
 {
     if(prepare_data(debug))
     {
@@ -121,8 +121,20 @@ void train_mnist_svm(int debug)
     CvSVM svm;
     CvSVMParams params;
     CvTermCriteria criteria;
-
+    
     criteria = cvTermCriteria(CV_TERMCRIT_EPS,1000,0.001);//FLT_EPSILON);
+    /*parameters of SVM
+     * int svm_type             --CvSVM::C_SVC,CvSVM::NU_SVC,CvSVM::ONE_CLASS,CvSVM::EPS_SVR,CvSVM::NU_SVR
+     * int kernel_type          --CvSVM::LINEAR,CvSVM::POLY,CvSVM::RBF,CvSVM::SIGMOID
+     * double degree            --degree of poly kernel
+     * double gamma             --gamma of poly/rbf/sgmoid kernel
+     * double coef0             --coef0 of poly/sigmoid kernel
+     * double Cvalue            --C of problem C_SVC/EPS_SVR/NU_SVR
+     * double nu                --nu of problem NU_SVC/ONE_CLASS/NU_SVR
+     * double p                 --p of problem EPS_SVR
+     * CvMat* class_weights     --optional weights in C_SVC problem,assigned to particular classes.
+     * CvTermCriteria term_crit --termination criteria
+     * */
     params = CvSVMParams(CvSVM::C_SVC,CvSVM::RBF,10.0,8.0,1.0,10.0,0.5,0.1,NULL,criteria);
     svm.train(trainData,trainLabel,Mat(),Mat(),params);
     cout<<"Done !"<<endl;
@@ -131,7 +143,7 @@ void train_mnist_svm(int debug)
 
 }
 
-void test_mnist_svm(int debug)
+void test_by_svm(int debug)
 {
     ifstream ifs;
     ofstream ofs,ofs_d;
@@ -184,11 +196,12 @@ void test_mnist_svm(int debug)
         ofs_d.close();
     }
     ofs<<"accurcy:"<<1.0 * correct / cnt << "(" << correct <<"/"<<cnt<<")"<<endl;
+    cout<<"Done !"<<endl;
     ifs.close();
     ofs.close();
 }
 
-void train_mnist_dtrees(int debug)
+void train_by_rtrees(int debug)
 {
     if(prepare_data(debug))
     {
@@ -198,15 +211,26 @@ void train_mnist_dtrees(int debug)
     cout<<"start training Random Trees..."<<endl;
     CvRTrees forest;
     CvRTParams params;
-
-    params = CvRTParams(10,10,0,false,15,0,true,4,100,0.01f,CV_TERMCRIT_ITER);
+    /*random forest parameters
+     *int max_depth                       -- the depth of the tree
+     *int min_sample_count                -- minimum samples required at a leaf node for int to split
+     *float regression_accuracy
+     *bool use_surrogate
+     *int max_categories
+     *const float* priors
+     *bool calc_var_importance            -- if this is true then variable importance will be calculated
+     *int nactive_vars                    -- the size of the randomly selected subset of features at each tree node used to find best splits
+     *int max_num_of_trees_in_the_forest  -- the maximum number of trees in the forest
+     *float forest_accuracy               -- sufficient accuracy(oob error)
+     *int termcrit_type                   -- terminal type     */
+    params = CvRTParams(10,10,0,false,15,0,true,10,500,0.01f,CV_TERMCRIT_ITER);
     forest.train(trainData,CV_ROW_SAMPLE,trainLabel,Mat(),Mat(),Mat(),Mat(),params);
     cout<<"Done !"<<endl;
     forest.save(RANDOM_TREES_MODEL_NAME);
     return;
 }
 
-void test_mnist_dtrees(int debug)
+void test_by_rtrees(int debug)
 {
     ifstream ifs;
     ofstream ofs,ofs_d;
@@ -259,6 +283,7 @@ void test_mnist_dtrees(int debug)
         ofs_d.close();
     }
     ofs<<"accurcy:"<<1.0 * correct / cnt << "(" << correct <<"/"<<cnt<<")"<<endl;
+    cout<<"Done !"<<endl;
     ifs.close();
     ofs.close();
 }
@@ -268,8 +293,8 @@ int main(int argc,char *argv[])
     string arg1,arg2,arg3;
     void (*train)(int);
     void (*test)(int);
-    train = train_mnist_svm;
-    test = test_mnist_svm;
+    train = train_by_svm;
+    test = test_by_svm;
     if(argc >= 2)
     {
         arg1 = argv[1];
@@ -287,13 +312,13 @@ int main(int argc,char *argv[])
         }
         else if(arg1 == "--svm")
         {
-            train = train_mnist_svm;
-            test = test_mnist_svm;
+            train = train_by_svm;
+            test = test_by_svm;
         }
         else if(arg1 == "--rtrees")
         {
-            train = train_mnist_dtrees;
-            test = test_mnist_dtrees;
+            train = train_by_rtrees;
+            test = test_by_rtrees;
         }
         else
         {
@@ -318,13 +343,13 @@ int main(int argc,char *argv[])
         }
         else if(arg2 == "--svm")
         {
-            train = train_mnist_svm;
-            test = test_mnist_svm;
+            train = train_by_svm;
+            test = test_by_svm;
         }
         else if(arg2 == "--rtrees")
         {
-            train = train_mnist_dtrees;
-            test = test_mnist_dtrees;
+            train = train_by_rtrees;
+            test = test_by_rtrees;
         }
         else
         {
@@ -349,13 +374,13 @@ int main(int argc,char *argv[])
         }
         else if(arg3 == "--svm")
         {
-            train = train_mnist_svm;
-            test = test_mnist_svm;
+            train = train_by_svm;
+            test = test_by_svm;
         }
         else if(arg3 == "--rtrees")
         {
-            train = train_mnist_dtrees;
-            test = test_mnist_dtrees;
+            train = train_by_rtrees;
+            test = test_by_rtrees;
         }
         else
         {
