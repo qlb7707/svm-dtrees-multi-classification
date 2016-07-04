@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sstream>
 #include <unistd.h>
+#include "flag_def.h" 
 #define FEAT_SMALL_IMAGE
 #ifdef FEAT_SMALL_IMAGE
 #define FEAT_HEIGHT 8
@@ -295,7 +296,7 @@ int main(int argc,char *argv[])
     void (*test)(int);
     train = train_by_svm;
     test = test_by_svm;
-    if(argc >= 2)
+/*    if(argc >= 2)
     {
         arg1 = argv[1];
         if(arg1 == "-t")
@@ -387,16 +388,37 @@ int main(int argc,char *argv[])
             cout << "param " << arg3 << " not supported" << endl;
             return -1;
         }
+    }*/
+    rtc::FlagList::SetFlagsFromCommandLine(&argc,argv,true);
+    if(string(FLAG_algo) == "svm")
+    {
+        train = train_by_svm;
+        test = test_by_svm;
+    }
+    else if(string(FLAG_algo) == "rtrees")
+    {
+        train = train_by_rtrees;
+        test = test_by_rtrees;
+    }
+    else
+    {
+        cout<<"unsupported algorithm"<<endl;
+        return -1;
     }
 
+    if(string(FLAG_mode) == "train")
+    {
+        train(FLAG_debug);
+    }
+    else if(string(FLAG_mode) == "test")
+    {
+        test(FLAG_debug);     
+    }
+    else
+    {
+        cout<<"unsupported mode"<<endl;
+        return -1;
+    }
 
-    if(train_flag)
-    {
-        train(debug_flag);
-    }
-    if(test_flag)
-    {
-        test(debug_flag);     
-    }
     return 0;
 }
