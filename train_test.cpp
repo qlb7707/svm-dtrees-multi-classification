@@ -140,6 +140,8 @@ void train_by_svm(int debug)
     svm.train(trainData,trainLabel,Mat(),Mat(),params);
     cout<<"Done !"<<endl;
     svm.save(SVM_MODEL_NAME);
+    trainData.release();
+    trainLabel.release();
     return;
 
 }
@@ -228,6 +230,8 @@ void train_by_rtrees(int debug)
     forest.train(trainData,CV_ROW_SAMPLE,trainLabel,Mat(),Mat(),Mat(),Mat(),params);
     cout<<"Done !"<<endl;
     forest.save(RANDOM_TREES_MODEL_NAME);
+    trainData.release();
+    trainLabel.release();
     return;
 }
 
@@ -290,106 +294,15 @@ void test_by_rtrees(int debug)
 }
 int main(int argc,char *argv[])
 {
-    int train_flag = 0,test_flag = 0, debug_flag = 0;
-    string arg1,arg2,arg3;
     void (*train)(int);
     void (*test)(int);
     train = train_by_svm;
     test = test_by_svm;
-/*    if(argc >= 2)
-    {
-        arg1 = argv[1];
-        if(arg1 == "-t")
-        {
-            train_flag = 1;
-        }
-        else if(arg1 == "-d")
-        {
-            debug_flag = 1;
-        }
-        else if(arg1 == "-p")
-        {
-            test_flag = 1;
-        }
-        else if(arg1 == "--svm")
-        {
-            train = train_by_svm;
-            test = test_by_svm;
-        }
-        else if(arg1 == "--rtrees")
-        {
-            train = train_by_rtrees;
-            test = test_by_rtrees;
-        }
-        else
-        {
-            cout << "param " << arg1 << " not supported" << endl;
-            return -1;
-        }
-    }
-    if(argc >= 3)
-    {
-        arg2 = argv[2];
-        if(arg2 == "-t")
-        {
-            train_flag = 1;
-        }
-        else if(arg2 == "-d")
-        {
-            debug_flag = 1;
-        }
-        else if(arg2 == "-p")
-        {
-            test_flag = 1;
-        }
-        else if(arg2 == "--svm")
-        {
-            train = train_by_svm;
-            test = test_by_svm;
-        }
-        else if(arg2 == "--rtrees")
-        {
-            train = train_by_rtrees;
-            test = test_by_rtrees;
-        }
-        else
-        {
-            cout << "param " << arg2 << " not supported" << endl;
-            return -1;
-        }
-    }
-    if(argc == 4)
-    {
-        arg3 = argv[3];
-        if(arg3 == "-t")
-        {
-            train_flag = 1;
-        }
-        else if(arg3 == "-d")
-        {
-            debug_flag = 1;
-        }
-        else if(arg3 == "-p")
-        {
-            test_flag = 1;
-        }
-        else if(arg3 == "--svm")
-        {
-            train = train_by_svm;
-            test = test_by_svm;
-        }
-        else if(arg3 == "--rtrees")
-        {
-            train = train_by_rtrees;
-            test = test_by_rtrees;
-        }
-        else
-        {
-            cout << "param " << arg3 << " not supported" << endl;
-            return -1;
-        }
-    }*/
     rtc::FlagList::SetFlagsFromCommandLine(&argc,argv,true);
+    if(FLAG_help)
+    {
+        rtc::FlagList::Print(NULL,false);
+    }
     if(string(FLAG_algo) == "svm")
     {
         train = train_by_svm;

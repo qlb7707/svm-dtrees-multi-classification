@@ -10,7 +10,7 @@
 #ifndef _FLAG_DEF_H
 #define _FLAG_DEF_H
 #include "flags.h"
-
+DEFINE_bool(help,false,"print message");
 DEFINE_string(algo,"svm","learning algorithm");
 
 DEFINE_string(mode,"test","train or test");
