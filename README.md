@@ -12,10 +12,9 @@
 - 2. make
 
 ##usage
-- "-p"      :predict mode
-- "-d"      :debug mode
-- "-t"      :train mode
-- "--svm"   :train/predict using svm
-- "--rtrees":train/predict using random forest
+- "--help"      :print help message
+- "--algo"      :"svm" and "rtrees" are supported
+- "--mode"      :"train" or "test"
+- "--debug"   :0 or 1
 
 
